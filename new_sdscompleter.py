@@ -7,6 +7,8 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
+
 class SDSCompleter(Completer):
     """
     Simple autocompletion on a list of words.
@@ -22,6 +24,11 @@ class SDSCompleter(Completer):
                          middle of the word.
     """
     osd = ["df","tree"]
+    megacli = ["pdlist", "ldlist"]
+    source = ["osd","bcache_quote",'create', 'select', 'insert', 'drop',
+                'delete', 'from', 'where', 'table', "megacli"] 
+
+
     
     def __init__(self, words, ignore_case=False, meta_dict=None, WORD=False,
                  sentence=False, match_middle=False):
@@ -57,6 +64,7 @@ class SDSCompleter(Completer):
             word_before_cursor = word_before_cursor.lower()
         text = document.text_before_cursor
         #print "word_before_cursor:", word_before_cursor
+        _logger.info(text)
 
         def word_matches(word):
             """ True when the word before the cursor matches. """
@@ -64,20 +72,30 @@ class SDSCompleter(Completer):
                 word = word.lower()
 
             if self.match_middle:
-                return word_betfore_cursor in word
+                return word_before_cursor in word
             else:
                 return word.startswith(word_before_cursor)
-
+        
+        def not_support(word):
+            """ True when word before the cursor not match in all words"""
+            return any([ True for i in self.words if i.startswith(word)])
+        
+        _logger.info(word_before_cursor)
         completions = []
-        for a in self.words:
-            if word_matches(a):
-                if text.startswith("osd"):
-                    return [Completion("df", -len(word_before_cursor)), 
-                            Completion("tree", -len(word_before_cursor))]
-                display_meta = self.meta_dict.get(a, '')
-                lists = self.find_matches(word_before_cursor,self.words)
-                #_logger.info(lists)
-                completions.extend(lists)
-                #_logger.info(completions)
-                return completions
+        if not_support(word_before_cursor):
+            if text.startswith("osd"):
+                return [Completion("df", -len(word_before_cursor) ), 
+                        Completion("tree", -len(word_before_cursor))]
+            if text.startswith("megacli"):
+                return [Completion("pdlist", -len(word_before_cursor) ), 
+                        Completion("ldlist", -len(word_before_cursor))]
+
+            lists = self.find_matches(word_before_cursor,self.words)
+            _logger.info(lists)
+            completions.extend(lists)
+            _logger.info(completions)
+            return completions
+        else:
+            _logger.info(word_before_cursor)
+            return completions
         

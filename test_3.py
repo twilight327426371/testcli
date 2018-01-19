@@ -4,7 +4,7 @@ import sqlite3
 
 from prompt_toolkit import prompt, AbortAction
 from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.contrib.completers import WordCompleter
+from prompt_toolkit.contrib.completers import WordCompleter, PathCompleter
 from prompt_toolkit import CommandLineInterface
 from pygments.lexers import SqlLexer
 from pygments.style import Style
@@ -15,11 +15,10 @@ import subprocess
 import logging
 import click
 from .new_sdscompleter import SDSCompleter
-import traceback
 
 _logger = logging.getLogger(__name__)
 sql_completer = SDSCompleter(["osd","bcache_quote",'create', 'select', 'insert', 'drop',
-                               'delete', 'from', 'where', 'table','megacli'], ignore_case=True, )
+                               'delete', 'from', 'where', 'table'], ignore_case=True, )
 class DocumentStyle(Style):
     styles = {
         Token.Menu.Completions.Completion.Current: 'bg:#00aaaa #000000',
@@ -88,7 +87,7 @@ def initalize_logging():
     root_logger = logging.getLogger('testcli')
     root_logger.addHandler(handler)
     root_logger.setLevel(logging.INFO)
-    #logging.captureWarnings(True)
+    logging.captureWarnings(True)
     root_logger.info('initializing test logging!')
 
 def main(database):
@@ -104,13 +103,11 @@ def main(database):
     click.secho("  \/_____/_/  \/__\      \/_____/   \/_____/   \/_/ ", fg="magenta")
     while True:
         try:
-            text = prompt('> ', lexer=SqlLexer, completer=sql_completer,
+            text = prompt('> ', lexer=SqlLexer, completer=PathCompleter(),
                           style=DocumentStyle, history=history,key_bindings_registry=key_binding_manager.registry,
                           on_abort=AbortAction.RETRY)
         except EOFError:
             break  # Control-D pressed.
-        except Exception as e:
-            _logger.error("traceback: %r", traceback.format_exc())
         if text.startswith('bcache'):
             print bcache_quote()
         elif text.startswith('osd_df'):

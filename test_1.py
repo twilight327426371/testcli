@@ -30,5 +30,24 @@ def check_method_1():
         print 'end'
     else:
         print "No data"
+        
+def thread1():
+    for x in range(4):
+        yield  x
+        
+
+def thread2():
+    for x in range(4,8):
+        yield  x
+        
+
+threads=[]
+threads.append(thread1())
+threads.append(thread2())
+
+
+def run(threads): #写这个函数，模拟线程并发
+    pass
+
 if __name__ == "__main__":
-    check_method_1()
+    run(threads)

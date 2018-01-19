@@ -1,4 +1,16 @@
 import re
+import sys
+import logging
+
+_logger = logging.getLogger(__name__)
+
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    string_types = str
+else:
+    string_types = basestring
 
 cleanup_regex = {
         # This matches only alphanumerics and underscores.
@@ -56,3 +68,59 @@ def last_word(text, include='alphanum_underscore'):
         else:
             return ''
 
+def suggest_type(full_text, text_before_cursor):
+    """Takes the full_text that is typed so far and also the text before the
+    cursor to suggest completion type and scope.
+
+    Returns a tuple with a type of entity ('table', 'column' etc) and a scope.
+    A scope for a column category will be a list of tables.
+    """
+
+    word_before_cursor = last_word(text_before_cursor,
+            include='many_punctuations')
+    identifier = None
+
+    # here should be removed once sqlparse has been fixed
+    try:
+        # If we've partially typed a word then word_before_cursor won't be an empty
+        # string. In that case we want to remove the partially typed string before
+        # sending it to the sqlparser. Otherwise the last token will always be the
+        # partially typed string which renders the smart completion useless because
+        # it will always return the list of keywords as completion.
+        if word_before_cursor:
+            last_token = last_word(text_before_cursor)
+            # word_before_cursor may include a schema qualification, like
+            # "schema_name.partial_name" or "schema_name.", so parse it
+            # separately
+        else:
+            last_token = last_word(text_before_cursor[:-len(word_before_cursor)])
+    except (TypeError, AttributeError):
+        return [{'type': 'keyword'}]
+
+    return suggest_based_on_last_token(last_token, text_before_cursor,
+                                       full_text)
+
+def suggest_based_on_last_token(token, text_before_cursor, full_text):
+    _logger.debug(token)
+    _logger.debug(text_before_cursor)
+    _logger.debug(full_text)
+    if isinstance(token, string_types):
+        token_v = token.lower()
+    else:
+        token_v = token.value.lower()
+
+    is_operand = lambda x: x and any([x.endswith(op) for op in ['+', '-', '*', '/']])
+
+    if not token:
+        return [{'type': 'keyword'}, {'type': 'special'}]
+    elif token_v in ('osd'):
+        return [{'type': 'osd'}]
+    elif token_v in ('megacli'):
+        return [{'type': 'megacli'}]
+    else:
+        return [{'type': 'op'}]
+
+
+def identifies(id, schema, table, alias):
+    return id == alias or id == table or (
+        schema and (id == schema + '.' + table))
