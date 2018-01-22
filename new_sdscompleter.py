@@ -1,6 +1,6 @@
 from re import escape
 from prompt_toolkit.completion import Completer, Completion
-from utils import last_word
+from utils import last_word, suggest_type
 from six import string_types
 import logging
 
@@ -23,9 +23,9 @@ class SDSCompleter(Completer):
     :param match_middle: When True, match not only the start, but also in the
                          middle of the word.
     """
-    osd = ["df","tree"]
+    osd     = ["df", "tree"]
     megacli = ["pdlist", "ldlist"]
-    source = ["osd","bcache_quote",'create', 'select', 'insert', 'drop',
+    keyword = ["osd", "bcache_quote", 'create', 'select', 'insert', 'drop',
                 'delete', 'from', 'where', 'table', "megacli"] 
 
 
@@ -65,7 +65,6 @@ class SDSCompleter(Completer):
         text = document.text_before_cursor
         #print "word_before_cursor:", word_before_cursor
         _logger.info(text)
-
         def word_matches(word):
             """ True when the word before the cursor matches. """
             if self.ignore_case:
@@ -80,22 +79,38 @@ class SDSCompleter(Completer):
             """ True when word before the cursor not match in all words"""
             return any([ True for i in self.words if i.startswith(word)])
         
-        _logger.info(word_before_cursor)
+        
+        _logger.debug(word_before_cursor)
         completions = []
-        if not_support(word_before_cursor):
-            if text.startswith("osd"):
-                return [Completion("df", -len(word_before_cursor) ), 
-                        Completion("tree", -len(word_before_cursor))]
-            if text.startswith("megacli"):
-                return [Completion("pdlist", -len(word_before_cursor) ), 
-                        Completion("ldlist", -len(word_before_cursor))]
+        suggestions = suggest_type(document.text, document.text_before_cursor)
+        for suggestion in suggestions:
+            _logger.debug("Suggestion type: %r", suggestion["type"])
+            if suggestion['type'] == "osd":
+                osd_cli = self.find_matches(word_before_cursor, self.osd)
+                completions.extend(osd_cli)
+                _logger.debug(completions)
+            if suggestion['type'] == "megacli":
+                megaclis = self.find_matches(word_before_cursor, self.megacli)
+                completions.extend(megaclis)
+            if suggestion['type'] == "keyword":
+                keywords = self.find_matches(word_before_cursor, self.keyword)
+                completions.extend(keywords)
+        return completions
 
-            lists = self.find_matches(word_before_cursor,self.words)
-            _logger.info(lists)
-            completions.extend(lists)
-            _logger.info(completions)
-            return completions
-        else:
-            _logger.info(word_before_cursor)
-            return completions
+        #if not_support(word_before_cursor):
+            #if text.startswith("osd"):
+                #return [Completion("df", -len(word_before_cursor) ), 
+                        #Completion("tree", -len(word_before_cursor))]
+            #if text.startswith("megacli"):
+                #return [Completion("pdlist", -len(word_before_cursor) ), 
+                        #Completion("ldlist", -len(word_before_cursor))]
+
+            #lists = self.find_matches(word_before_cursor,self.words)
+            #_logger.info(lists)
+            #completions.extend(lists)
+            #_logger.info(completions)
+            #return completions
+        #else:
+            #_logger.info(word_before_cursor)
+            #return completions
         

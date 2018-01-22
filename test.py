@@ -55,6 +55,7 @@ def mycli_bindings():
             event.cli.start_completion(select_first=True)
     return key_binding_manager
 
+
 def run(cmd):
     err = None
     out = ''
@@ -63,10 +64,10 @@ def run(cmd):
         out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError, e:
         err = e.output
-    logging.info('cmd: ' + cmd)
+    #logging.info('cmd: ' + cmd)
     # print 'CMD: ' + cmd
     if err:
-        logging.error(err)
+        _logger.error(err)
         return err
     else:
         return out
@@ -87,7 +88,7 @@ def initalize_logging():
     handler.setFormatter(formatter)    
     root_logger = logging.getLogger('testcli')
     root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG)
     #logging.captureWarnings(True)
     root_logger.info('initializing test logging!')
 

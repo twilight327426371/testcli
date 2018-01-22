@@ -11,7 +11,6 @@ if PY3:
     string_types = str
 else:
     string_types = basestring
-
 cleanup_regex = {
         # This matches only alphanumerics and underscores.
         'alphanum_underscore': re.compile(r'(\w+)$'),
@@ -79,6 +78,7 @@ def suggest_type(full_text, text_before_cursor):
     word_before_cursor = last_word(text_before_cursor,
             include='many_punctuations')
     identifier = None
+    _logger.debug(word_before_cursor)
 
     # here should be removed once sqlparse has been fixed
     try:
@@ -93,7 +93,12 @@ def suggest_type(full_text, text_before_cursor):
             # "schema_name.partial_name" or "schema_name.", so parse it
             # separately
         else:
-            last_token = last_word(text_before_cursor[:-len(word_before_cursor)])
+            _logger.debug(len(word_before_cursor))
+            words = text_before_cursor.split(" ")
+            if len(words) > 1:
+                last_token = text_before_cursor.split(" ")[-2]
+            else:
+                last_token = last_word(text_before_cursor[:-len(word_before_cursor)])
     except (TypeError, AttributeError):
         return [{'type': 'keyword'}]
 
@@ -112,13 +117,13 @@ def suggest_based_on_last_token(token, text_before_cursor, full_text):
     is_operand = lambda x: x and any([x.endswith(op) for op in ['+', '-', '*', '/']])
 
     if not token:
-        return [{'type': 'keyword'}, {'type': 'special'}]
-    elif token_v in ('osd'):
+        return [{'type': 'keyword'}]
+    elif token_v == 'osd':
         return [{'type': 'osd'}]
-    elif token_v in ('megacli'):
+    elif token_v == ('megacli'):
         return [{'type': 'megacli'}]
     else:
-        return [{'type': 'op'}]
+        return [{'type': 'keyword'}]
 
 
 def identifies(id, schema, table, alias):
