@@ -1,6 +1,7 @@
 import re
 import sys
 import logging
+import subprocess
 
 _logger = logging.getLogger(__name__)
 
@@ -66,6 +67,22 @@ def last_word(text, include='alphanum_underscore'):
             return matches.group(0)
         else:
             return ''
+
+def run(cmd):
+    err = None
+    out = ''
+    # out_file = open('cmd_output.txt', 'a')
+    try:
+        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+    except subprocess.CalledProcessError, e:
+        err = e.output
+    #logging.info('cmd: ' + cmd)
+    # print 'CMD: ' + cmd
+    if err:
+        _logger.error(err)
+        return err
+    else:
+        return out
 
 def suggest_type(full_text, text_before_cursor):
     """Takes the full_text that is typed so far and also the text before the

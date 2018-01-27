@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+import re
 import sys
 import sqlite3
 
@@ -15,11 +16,14 @@ import subprocess
 import logging
 import click
 from .new_sdscompleter import SDSCompleter
+from .colors import red
 import traceback
+from prompt_toolkit.keys import Keys
+from prompt_toolkit.key_binding.manager import KeyBindingManager
+from .sdscmd import Sds
 
 _logger = logging.getLogger(__name__)
-sql_completer = SDSCompleter(["osd","bcache_quote",'create', 'select', 'insert', 'drop',
-                               'delete', 'from', 'where', 'table','megacli'], ignore_case=True, )
+
 class DocumentStyle(Style):
     styles = {
         Token.Menu.Completions.Completion.Current: 'bg:#00aaaa #000000',
@@ -29,8 +33,6 @@ class DocumentStyle(Style):
     }
     styles.update(DefaultStyle.styles)
 
-from prompt_toolkit.keys import Keys
-from prompt_toolkit.key_binding.manager import KeyBindingManager
 
 def mycli_bindings():
 
@@ -56,30 +58,6 @@ def mycli_bindings():
     return key_binding_manager
 
 
-def run(cmd):
-    err = None
-    out = ''
-    # out_file = open('cmd_output.txt', 'a')
-    try:
-        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError, e:
-        err = e.output
-    #logging.info('cmd: ' + cmd)
-    # print 'CMD: ' + cmd
-    if err:
-        _logger.error(err)
-        return err
-    else:
-        return out
-
-def bcache_quote():
-    cmd = "cat /sys/fs/bcache/$(/opt/sandstone/sbin/sdscache_ctl -q \
-    /dev/sdb2 | grep cset.uuid | awk '{print $2}')/cache0/priority_stats"
-    return run(cmd)
-
-def osd_df():
-    cmd = "/opt/sandstone/bin/sds osd df | sort -nk 6"
-    return run(cmd)
 
 def initalize_logging():
     handler = logging.FileHandler('test.log')
@@ -91,6 +69,21 @@ def initalize_logging():
     root_logger.setLevel(logging.DEBUG)
     #logging.captureWarnings(True)
     root_logger.info('initializing test logging!')
+
+class Cli(object):
+    @classmethod
+    def register(cls, cmd_class):
+        cmd = cmd_class()
+        for attr in dir(cmd):
+            m = getattr(cmd, attr)
+            if callable(m):
+                setattr(cls, attr, m)
+
+Cli.register(Sds)
+print type(Cli.osd_df)
+#sql_completer = SDSCompleter(["osd","bcache_quote",'create', 'select', 'insert', 'drop',
+#                               'delete', 'from', 'where', 'table','megacli'], ignore_case=True, )
+sds_completer = SDSCompleter(ignore_case=True)
 
 def main(database):
     initalize_logging()
@@ -105,19 +98,27 @@ def main(database):
     click.secho("  \/_____/_/  \/__\      \/_____/   \/_____/   \/_/ ", fg="magenta")
     while True:
         try:
-            text = prompt('> ', lexer=SqlLexer, completer=sql_completer,
-                          style=DocumentStyle, history=history,key_bindings_registry=key_binding_manager.registry,
+            text = prompt('> ', lexer=SqlLexer, completer=sds_completer,
+                          style=DocumentStyle, history=history,
+                          key_bindings_registry=key_binding_manager.registry,
                           on_abort=AbortAction.RETRY)
         except EOFError:
             break  # Control-D pressed.
         except Exception as e:
             _logger.error("traceback: %r", traceback.format_exc())
-        if text.startswith('bcache'):
-            print bcache_quote()
-        elif text.startswith('osd_df'):
-            print osd_df()
+
+        text = re.sub(" ", "_", text)
+        if text in dir(Cli):
+            m = getattr(Cli, text)
+            print m()
         else:
-            print run(text)
+            print(red("not support the cmd"))
+        #if text.startswith('bcache'):
+        #    print "bcache"
+        #elif text.startswith('osd_df'):
+        #    print "osd df"
+        #else:
+        #    print run(text)
         #with connection:
         #    messages = connection.execute(text)
         #    for message in messages:
@@ -129,6 +130,6 @@ if __name__ == '__main__':
         db = ':memory:'
     else:
         db = sys.argv[1]
-
+    print db
     main(db)
 

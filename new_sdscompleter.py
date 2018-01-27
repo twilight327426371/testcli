@@ -7,8 +7,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-
-
 class SDSCompleter(Completer):
     """
     Simple autocompletion on a list of words.
@@ -28,18 +26,17 @@ class SDSCompleter(Completer):
     keyword = ["osd", "bcache_quote", 'create', 'select', 'insert', 'drop',
                 'delete', 'from', 'where', 'table', "megacli"] 
 
-
     
-    def __init__(self, words, ignore_case=False, meta_dict=None, WORD=False,
+    def __init__(self, ignore_case=False, meta_dict=None, WORD=False,
                  sentence=False, match_middle=False):
         assert not (WORD and sentence)
-        self.words = list(words)
+        #self.words = words
         self.ignore_case = ignore_case
         self.meta_dict = meta_dict or {}
         self.WORD = WORD
         self.sentence = sentence
         self.match_middle = match_middle
-        assert all(isinstance(w, string_types) for w in self.words)
+        #assert all(isinstance(w, string_types) for w in self.words)
     
     @staticmethod
     def find_matches(text, collections):

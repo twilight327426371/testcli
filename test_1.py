@@ -1,3 +1,4 @@
+#coding=utf-8
 from collections import OrderedDict
 
 class CompletionRefresher(object):
@@ -49,5 +50,26 @@ threads.append(thread2())
 def run(threads): #写这个函数，模拟线程并发
     pass
 
+def mustBeKeywords(func):
+    import inspect
+    positions = inspect.getargspec(func).args
+    args, varargs, kwargs, defaults = inspect.getargspec(func)
+    def wrapper(*args, **kwargs):
+        print args
+        print varargs
+        print kwargs
+        print defaults 
+        for pos in positions:
+            if pos not in kwargs:
+                raise Exception(pos + " must be keyword parameter")
+        return func(*args, **kwargs) 
+    return wrapper
+
+@mustBeKeywords
+def demo(*sss):
+    print "*"*20
+    print sss 
+
 if __name__ == "__main__":
-    run(threads)
+    #run(threads)
+    demo(1, 2, 3, 4, 5, 6)
