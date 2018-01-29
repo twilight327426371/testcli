@@ -108,21 +108,14 @@ def main(database):
             _logger.error("traceback: %r", traceback.format_exc())
 
         text = re.sub(" ", "_", text)
-        if text in dir(Cli):
+        if not text:
+            pass
+        elif text in dir(Cli):
             m = getattr(Cli, text)
             print m()
         else:
             print(red("not support the cmd"))
-        #if text.startswith('bcache'):
-        #    print "bcache"
-        #elif text.startswith('osd_df'):
-        #    print "osd df"
-        #else:
-        #    print run(text)
-        #with connection:
-        #    messages = connection.execute(text)
-        #    for message in messages:
-        #        print(message)
+
     print('GoodBye!')
 
 if __name__ == '__main__':

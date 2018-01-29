@@ -22,8 +22,8 @@ class Sds:
         print cmd
         return run(cmd)
 
-    def flashcache_stat(self, cache):
-        cmd = "/opt/sandstone/sbin/sdscache_stat -d /dev/mapper/" + cache
+    def flashcache_stat(self):
+        cmd = "/opt/sandstone/sbin/sdscache_stat -d /dev/mapper/"
         return run(cmd)
 
 

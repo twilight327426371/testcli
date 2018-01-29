@@ -140,6 +140,21 @@ def suggest_based_on_last_token(token, text_before_cursor, full_text):
     elif token_v == ('megacli'):
         return [{'type': 'megacli'}]
     else:
+        prev_keyword = find_prev_keyword(text_before_cursor)
+        if isinstance(prev_keyword, unicode):
+            _logger.debug(prev_keyword)
+            return suggest_based_on_last_token(prev_keyword, text_before_cursor, full_text)
+        #prev_keyword is [{'type': 'keyword'}] , then return prev_keyword
+        elif isinstance(prev_keyword, list):
+            return prev_keyword
+
+def find_prev_keyword(text):
+    t_lst = text.split(" ")
+    if len(t_lst) > 1:
+        _logger.debug(t_lst[-2])
+        _logger.debug(type(t_lst[-2]))
+        return t_lst[-2]
+    else:
         return [{'type': 'keyword'}]
 
 
