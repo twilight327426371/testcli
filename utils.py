@@ -12,6 +12,7 @@ if PY3:
     string_types = str
 else:
     string_types = basestring
+
 cleanup_regex = {
         # This matches only alphanumerics and underscores.
         'alphanum_underscore': re.compile(r'(\w+)$'),
@@ -113,7 +114,7 @@ def suggest_type(full_text, text_before_cursor):
             _logger.debug(len(word_before_cursor))
             words = text_before_cursor.split(" ")
             if len(words) > 1:
-                last_token = text_before_cursor.split(" ")[-2]
+                last_token = words[-2]
             else:
                 last_token = last_word(text_before_cursor[:-len(word_before_cursor)])
     except (TypeError, AttributeError):
@@ -131,33 +132,31 @@ def suggest_based_on_last_token(token, text_before_cursor, full_text):
     else:
         token_v = token.value.lower()
 
-    is_operand = lambda x: x and any([x.endswith(op) for op in ['+', '-', '*', '/']])
-
     if not token:
         return [{'type': 'keyword'}]
     elif token_v == 'osd':
         return [{'type': 'osd'}]
-    elif token_v == ('megacli'):
+    elif token_v == 'megacli':
         return [{'type': 'megacli'}]
     else:
-        prev_keyword = find_prev_keyword(text_before_cursor)
+        prev_keyword, new_text_before_cursor = find_prev_keyword(text_before_cursor)
         if isinstance(prev_keyword, unicode):
             _logger.debug(prev_keyword)
-            return suggest_based_on_last_token(prev_keyword, text_before_cursor, full_text)
+            _logger.debug(new_text_before_cursor)
+            return suggest_based_on_last_token(prev_keyword, new_text_before_cursor, full_text)
         #prev_keyword is [{'type': 'keyword'}] , then return prev_keyword
         elif isinstance(prev_keyword, list):
             return prev_keyword
 
 def find_prev_keyword(text):
-    t_lst = text.split(" ")
+    lst = re.split(r"\s+",text)
+    #to solve [u'osd', u'df', u''] will get 'df' alawys
+    t_lst = [ i for i in lst if i ]
+    _logger.debug(t_lst)
     if len(t_lst) > 1:
         _logger.debug(t_lst[-2])
-        _logger.debug(type(t_lst[-2]))
-        return t_lst[-2]
+        return t_lst[-2], " ".join(t_lst[:-2])
     else:
-        return [{'type': 'keyword'}]
+        return [{'type': 'keyword'}] , None
 
 
-def identifies(id, schema, table, alias):
-    return id == alias or id == table or (
-        schema and (id == schema + '.' + table))
