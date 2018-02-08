@@ -7,6 +7,7 @@ import subprocess
 import logging
 import click
 import traceback
+from collections import deque
 
 from prompt_toolkit import prompt, AbortAction
 from prompt_toolkit.history import FileHistory
@@ -18,9 +19,12 @@ from .colors import red
 from .sdscmd import Sds
 from .key_bindings import mycli_bindings
 from .clistyle import DocumentStyle
+from .sdslexers import SdsLexer
 
 
 _logger = logging.getLogger(__name__)
+
+debug = False
 
 def initalize_logging():
     handler = logging.FileHandler('test.log')
@@ -33,14 +37,55 @@ def initalize_logging():
     #logging.captureWarnings(True)
     root_logger.info('initializing test logging!')
 
+def echo_usp():
+    click.secho(" _   _ ___ _ __  " , fg="red")
+    click.secho("| | | / __| '_ \ " , fg="yellow")
+    click.secho("| |_| \__ \ |_) |" , fg="green")
+    click.secho(" \__,_|___/ .__/ " , fg="blue")
+    click.secho("          |_|    " , fg="magenta")
+
+def echo_mos():
+    click.secho(" _ __ ___   ___  ___  " , fg="red")
+    click.secho("| '_ ` _ \ / _ \/ __| " , fg="yellow")
+    click.secho("| | | | | | (_) \__ \ " , fg="green")
+    click.secho("|_| |_| |_|\___/|___/ " , fg="blue")
+
 class Cli(object):
+    attrs = []
     @classmethod
     def register(cls, cmd_class):
         cmd = cmd_class()
         for attr in dir(cmd):
             m = getattr(cmd, attr)
             if callable(m):
-                setattr(cls, attr, m)
+                if not attr.startswith('__'):
+                    cls.attrs.append(attr)
+                    setattr(cls, attr, m)
+    @staticmethod
+    def aitext(text):
+        # solve "osd df" with some space, 
+        # then get_methods return "osd_df" [" "]
+        infos = [ i for i in re.split("\s+", text) if i]
+        if infos:
+            d = deque(infos)
+            def get_methods(queue, ms=[]):
+                if queue:
+                    a = queue.popleft()
+                    ms.append(a)
+                    method = "_".join(ms)
+                    if method in Cli.attrs:
+                        return method, list(queue)
+                    else:
+                        return get_methods(queue) 
+            return get_methods(d)
+        #solve input some space will call traceback
+        else:
+            return None, None
+
+    @classmethod 
+    def enable_debug(cls):
+        global debug
+        debug = True
 
 Cli.register(Sds)
 sds_completer = SDSCompleter(ignore_case=True)
@@ -49,35 +94,31 @@ auto = AutoSuggestFromHistory()
 key_binding_manager = mycli_bindings()
 
 def main(database):
-    def _deal_text(text):
-        lst = re.split(r'\s+', text)
-        if lst[-1]:
-            return "_".join(lst)
-        else:
-            return "_".join(lst[0:-1])
+    #def _deal_text(text):
+    #    lst = re.split(r'\s+', text)
+    #    if lst[-1]: return "_".join(lst)
+    #    else: return "_".join(lst[0:-1])
     initalize_logging()
     connection = sqlite3.connect(database)
-    click.secho(" ________    ______     ______     __         __    ", fg="red")
-    click.secho("/\ \___\ \  /\ \_\ \   /\  ___\   /\ \       /\ \   ", fg="yellow")
-    click.secho("\ \ \___\ \ \ \_\___\  \ \ \____  \ \ \____  \ \ \  ", fg="green")
-    click.secho(" \ \_____\ \ \ \_\      \ \_____\  \ \_____\  \ \_\ ", fg="blue")
-    click.secho("  \/_____/_/  \/__\      \/_____/   \/_____/   \/_/ ", fg="magenta")
+    echo_usp()
+    echo_mos()
     while True:
         try:
-            text = prompt('> ', lexer=SqlLexer, completer=sds_completer,
-                          style=DocumentStyle, history=history, auto_suggest=auto,
-                          key_bindings_registry=key_binding_manager.registry,
+            text = prompt('> ', lexer=SdsLexer, completer=sds_completer,
+                          style=DocumentStyle, history=history, 
+                          auto_suggest=auto, key_bindings_registry=key_binding_manager.registry,
                           on_abort=AbortAction.RETRY)
         except EOFError:
             break  # Control-D pressed.
         except Exception as e:
             _logger.error("traceback: %r", traceback.format_exc())
-        text = _deal_text(text)
-        if not text:
+        method, paras = Cli.aitext(text)
+        print method, paras
+        if method:
+            m = getattr(Cli, method)
+            print m(*paras)
+        elif method is None:
             pass
-        elif text in dir(Cli):
-            m = getattr(Cli, text)
-            print m()
         else:
             print(red("not support the cmd"))
     print('GoodBye!')
@@ -88,4 +129,5 @@ if __name__ == '__main__':
     else:
         db = sys.argv[1]
     main(db)
+    #print Cli.aitext("osd tree asdsgsds")
 
