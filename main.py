@@ -73,14 +73,11 @@ class Cli(object):
                     a = queue.popleft()
                     ms.append(a)
                     method = "_".join(ms)
-                    if method in Cli.attrs:
-                        return method, list(queue)
-                    else:
-                        return get_methods(queue) 
+                    if method in Cli.attrs: return method, list(queue)
+                    else: return get_methods(queue) 
             return get_methods(d)
         #solve input some space will call traceback
-        else:
-            return None, None
+        else: return None, None
 
     @classmethod 
     def enable_debug(cls):
@@ -117,10 +114,8 @@ def main(database):
         if method:
             m = getattr(Cli, method)
             print m(*paras)
-        elif method is None:
-            pass
-        else:
-            print(red("not support the cmd"))
+        elif method is None: pass
+        else: print(red("not support the cmd"))
     print('GoodBye!')
 
 if __name__ == '__main__':
