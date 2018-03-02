@@ -23,7 +23,6 @@ from .sdslexers import SdsLexer
 
 
 _logger = logging.getLogger(__name__)
-
 debug = False
 
 def initalize_logging():
@@ -34,7 +33,6 @@ def initalize_logging():
     root_logger = logging.getLogger('testcli')
     root_logger.addHandler(handler)
     root_logger.setLevel(logging.DEBUG)
-    #logging.captureWarnings(True)
     root_logger.info('initializing test logging!')
 
 def echo_usp():
@@ -62,21 +60,28 @@ class Cli(object):
                     cls.attrs.append(attr)
                     setattr(cls, attr, m)
     @staticmethod
-    def aitext(text):
-        # solve "osd df" with some space, 
+    def parse_text(text):
+        # bug fixed : "osd df" with some space, 
         # then get_methods return "osd_df" [" "]
+        def get_methods(queue, ms=[]):
+            _logger.info(queue)
+            if queue:
+                a = queue.popleft()
+                ms.append(a)
+                method = "_".join(ms)
+                if method in Cli.attrs: 
+                    _logger.info(method)
+                    return method, list(queue)
+                else: return get_methods(queue) 
+            # bug fixed : the string method not in Cli.attrs
+            else: return None, None
+        _logger.info(red(text))
         infos = [ i for i in re.split("\s+", text) if i]
+        _logger.info(infos)
         if infos:
-            d = deque(infos)
-            def get_methods(queue, ms=[]):
-                if queue:
-                    a = queue.popleft()
-                    ms.append(a)
-                    method = "_".join(ms)
-                    if method in Cli.attrs: return method, list(queue)
-                    else: return get_methods(queue) 
-            return get_methods(d)
-        #solve input some space will call traceback
+            queues = deque(infos)
+            return get_methods(queues)
+        # bug fixed : some space can call traceback
         else: return None, None
 
     @classmethod 
@@ -96,7 +101,6 @@ def main(database):
     #    if lst[-1]: return "_".join(lst)
     #    else: return "_".join(lst[0:-1])
     initalize_logging()
-    connection = sqlite3.connect(database)
     echo_usp()
     echo_mos()
     while True:
@@ -108,12 +112,17 @@ def main(database):
         except EOFError:
             break  # Control-D pressed.
         except Exception as e:
+            raise e
             _logger.error("traceback: %r", traceback.format_exc())
-        method, paras = Cli.aitext(text)
-        print method, paras
+        _logger.info(red(text))
+        method, paras = Cli.parse_text(text)
         if method:
-            m = getattr(Cli, method)
-            print m(*paras)
+            try:
+                m = getattr(Cli, method)
+                print m(*paras)
+            except Exception as e:
+                print e.message
+
         elif method is None: pass
         else: print(red("not support the cmd"))
     print('GoodBye!')
